@@ -1,0 +1,85 @@
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+
+
+./gradlew clean publishOSGiImage -PcompositeBuild=true
+
+helm dependency build charts/corda
+
+
+helm install prereqs -n corda corda-dev-prereqs/charts/corda-dev-prereqs --timeout 10m  --debug --create-namespace
+
+helm install corda -n corda corda --values corda/values-prereqs.yaml --debug
+
+kubectl port-forward --namespace corda deployment/corda-rest-worker 8888 &
+
+
+
+MGM CPI作成
+
+corda-cli.sh package create-cpi \
+ --group-policy "GroupPolicy.json" \
+ --cpi-name "MGM" \
+ --cpi-version "1.0.0.0-SNAPSHOT" \
+ --file "MGM-1.0.0.0-SNAPSHOT.cpi"\
+ --keystore signingkeys.pfx \
+ --storepass "keystore password" \
+ --key "signing key 1"
+
+CPI署名キー作成
+
+keytool -genkeypair -alias "signing key 1" -keystore signingkeys.pfx -storepass "keystore password" -dname "cn=CPI Plugin Example - Signing Key 1, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+
+CPI署名キー証明書作成
+
+keytool -exportcert -rfc -alias "signing key 1" -keystore signingkeys.pfx -storepass "keystore password" -file signingkey1.pem
+
+cordaへのインポート
+
+curl --insecure -u admin:admin -X PUT -F alias="signingkey1-2025" -F certificate=@signingkey1.pem https://localhost:8888/api/v1/certificates/cluster/code-signer
+
+CPIアップロード
+
+curl --insecure -u admin:admin -F upload=@MGM-1.0.0.0-SNAPSHOT.cpi https://localhost:8888/api/v1/cpi/
+
+MGM VNode作成
+
+export CPI_CHECKSUM=<CPI checksum>
+curl --insecure -u admin:admin -d '{ "request": {"cpiFileChecksum": "6388F82AE6C0", "x500Name": "C=GB, L=London, O=MGM"}}' https://localhost:8888/api/v1/virtualnode
+
+MGMへTLS通信用のHSM作成
+
+curl --insecure -u admin:admin -X POST https://localhost:8888/api/v1/hsm/soft/3B3C168BA331/SESSION_INIT
+
+HSMへTLS通信用のキー登録
+
+curl --insecure -u admin:admin -X POST https://localhost:8888/api/v1/keys/3B3C168BA331/alias/3B3C168BA331-session/category/SESSION_INIT/scheme/CORDA.ECDSA.SECP256R1
+
+E07DF6B24267
+
+MGMへセッション開始(ネットワークメンバー認証)用のHSM作成
+
+curl --insecure -u admin:admin -X POST https://localhost:8888/api/v1/hsm/soft/3B3C168BA331/PRE_AUTH
+
+HSMへセッション開始(ネットワークメンバー認証)用のキー登録
+
+curl --insecure -u admin:admin -X POST https://localhost:8888/api/v1/keys/3B3C168BA331/alias/3B3C168BA331-auth/category/PRE_AUTH/scheme/CORDA.ECDSA.SECP256R1
+2ADED99ED19D
+
+クラスタレベルのP2P TLS通信キー作成(クラスタ単位で一度だけ実行)
+
+curl --insecure -u admin:admin -X POST -H "Content-Type: application/json" https://localhost:8888/api/v1/keys/p2p/alias/p2p-TLS/category/TLS/scheme/CORDA.RSA
+
+72ABD7FE0351
+
+クラスタレベルのP2P TLS通信キー証明書リクエスト(CSR)作成
+
+curl -k -u admin:admin  -X POST -H "Content-Type: application/json" -d '{"x500Name": "CN=CordaOperator, C=GB, L=London, O=Org", "subjectAlternativeNames": ["corda-p2p-gateway-worker.corda-cluster-a"]}' https://localhost:8888/api/v1/certificates/p2p/72ABD7FE0351 > request1.csr
+
+プライベートCAでCSRに署名し、証明書作成
+java -jar ./applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m /tmp/ca csr /home/shiielu/corda5-local/mgm/request1.csr
+
+証明書をアップロード
+
+curl -k -u admin:admin -X PUT  -F certificate=@/tmp/ca/request1/certificate.pem -F alias=p2p-tls-cert https://localhost:8888/api/v1/certificates/cluster/p2p-tls
