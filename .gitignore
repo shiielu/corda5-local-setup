@@ -23,6 +23,10 @@
 hs_err_pid*
 replay_pid*
 
-/corda
-/corda-runtime-os
-/corda-dev-prereqs
+corda/
+corda-runtime-os/
+corda-dev-prereqs/
+*.csr
+*.pfx
+*.cpi
+*.pem

@@ -75,15 +75,15 @@ sleep 5
 RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$MGM_FILE $REST_API_URL/cpi/)
 echo "$RESPONSE" | jq .
 echo "CPI uploaded to corda"
-# CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
-# 抽出したIDを表示
-# echo "CPI ID: $CPI_ID"
+CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
+
+
 # CPIチェックサム取得
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$CPI_ID)
 echo "$RESPONSE" | jq .
-# CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
-# echo "CPI CHECKSUM: $CPI_CHECKSUM"
+CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
+
 
 # MGM仮想ノード作成
 X500_NAME="C=GB, L=London, O=MGM"
