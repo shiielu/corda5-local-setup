@@ -28,5 +28,6 @@ corda-runtime-os/
 corda-dev-prereqs/
 *.csr
 *.pfx
-*.cpi
 *.pem
+*.cpb
+*.cpi
