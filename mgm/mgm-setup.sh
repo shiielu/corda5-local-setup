@@ -19,7 +19,7 @@ KEY_ALIAS="signing key 1"
 
 MGM_FILE="MGM-1.0.0.0-SNAPSHOT.cpi"
 
-KEY_CERT="cpi-signing-cert.pem"
+KEY_CERT="mgm-cpi-cert.pem"
 
 
 RUNTIME_OS_PATH="/home/shiielu/corda5-2-local/corda-runtime-os"
@@ -172,7 +172,7 @@ sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -i -F certificate=@"$CERTIFICATE_PATH" -F alias=p2p-tls-cert $REST_API_URL/certificate/cluster/p2p-tls)
 echo "cluster tls certificate uploaded to corda"
 
-# ビルド登録コンテキスト(MGMの根とワーク登録用)の作成
+# ビルド登録コンテキスト(ネットワークへのMGM登録用)の作成
 
 
 TLS_CA_CERT=$(cat /tmp/ca/ca/root-certificate.pem | awk '{printf "%s\\n", $0}')
@@ -200,6 +200,5 @@ echo "$RESPONSE" | jq .
 
 # MGMの通信プロパティ編集
 sleep 5
-RESPONSE=$(curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MGM_HOLDING_ID)
-echo "$RESPONSE" | jq .
+curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MGM_HOLDING_ID
 echo "MGM setup finished"

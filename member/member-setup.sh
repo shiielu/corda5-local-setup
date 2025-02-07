@@ -16,195 +16,162 @@ WORK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 KEY_STORE="signingkeys.pfx"
 STORE_PASS="keystore password"
 KEY_ALIAS="signing key 1"
+CPB_ALIAS="Member cpb cert"
 
-MGM_FILE="MGM-1.0.0.0-SNAPSHOT.cpi"
-
-KEY_CERT="cpi-signing-cert.pem"
-
-
+MEMBER_CPI_FILE="Member-1.0.0.0-SNAPSHOT.cpi"
+CPB_CERT="member-cpb-cert.pem"
+CPI_CERT="member-cpi-cert.pem"
+MEMBER_CPB_FILE="workflows-1.0-SNAPSHOT-package.cpb"
+SIGNED_MEMBER_CPB_FILE="signed-workflows-1.0-SNAPSHOT-package.cpb"
 RUNTIME_OS_PATH="/home/shiielu/corda5-2-local/corda-runtime-os"
 CERTIFICATE_REQUEST_PATH="request.csr"
 CERTIFICATE_PATH="/tmp/ca/request/certificate.pem"
+GROUP_POLICY="GroupPolicy.json"
+CORDA_DEFAULT_CERT="gradle-plugin-default-key.pem"
+CORDA_DEFAULT_KEY_ALIAS="gradle plugin default key"
 
-
-# グループポリシーをMGMからエクスポート
-curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $MGM_REST_URL/mgm/$MGM_HOLDING_ID/info > "$WORK_DIR/GroupPolicy.json"
-# #MGM CPI署名鍵作成
-
-
-# if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
-#     rm  "$WORK_DIR/$KEY_STORE"
-#     echo "key store regenerate"
-# fi
-# keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "cn=CPI Plugin Example - Signing Key 1, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
-# sleep 1
-
-# # MGM CPI作成
-# if [[ -e "$WORK_DIR/$MGM_FILE" ]]; then
-#     rm "$WORK_DIR/$MGM_FILE"
-#     echo "cpi file regenerate"
-# fi
-# corda-cli.sh package create-cpi \
-# --group-policy "$WORK_DIR/GroupPolicy.json" \
-# --cpi-name "MGM" \
-# --cpi-version "1.0.0.0-SNAPSHOT" \
-# --file "$WORK_DIR/$MGM_FILE" \
-# --keystore "$WORK_DIR/$KEY_STORE" \
-# --storepass "$STORE_PASS" \
-# --key "$KEY_ALIAS"
-# echo "cpi created"
-# sleep 1
-# # 署名検証用の証明書作成
-# if [[ -e "$WORK_DIR/$KEY_CERT" ]]; then
-#     rm  "$WORK_DIR/$KEY_CERT"
-#     echo "cpi singed cert regenerate"
-# fi
-# keytool -exportcert -rfc -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -file "$KEY_CERT"
-# echo "CPI cert created"
-
-
-
-
-
-# # 証明書をCordaへアップロード
-# sleep 5
-# curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="mgm-cpi-key-cert" -F certificate=@"$WORK_DIR/$KEY_CERT" $REST_API_URL/certificate/cluster/code-signer
-# echo "CPI cert uploaded to corda"
-
-# # CPIをCordaへアップロード
-# sleep 5
-# RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$MGM_FILE $REST_API_URL/cpi/)
-# echo "$RESPONSE" | jq .
-# echo "CPI uploaded to corda"
-# # CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
-# # 抽出したIDを表示
-# # echo "CPI ID: $CPI_ID"
-# # CPIチェックサム取得
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$CPI_ID)
-# echo "$RESPONSE" | jq .
-# # CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
-# # echo "CPI CHECKSUM: $CPI_CHECKSUM"
-
-# # MGM仮想ノード作成
-# X500_NAME="C=GB, L=London, O=MGM"
-# sleep 5
-# echo '{ "request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "'$X500_NAME'"}}'
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d '{"request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "C=GB, L=London, O=MGM"}}' $REST_API_URL/virtualnode)
-# echo "$RESPONSE" | jq .
-# echo "MGM VNode created"
-
-
-# REQUEST_ID=$(echo "$RESPONSE" | jq -r '.requestId')
-# echo "request ID: $REQUEST_ID"
-
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/virtualnode/status/$REQUEST_ID)
-# echo "$RESPONSE" | jq .
-# MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r '.resourceId')
-# echo "MGM holding ID: $MGM_HOLDING_ID"
-
-# # セッション開始キー(MGMとのTLS通信用)の作成
-# curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MGM_HOLDING_ID/SESSION_INIT
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MGM_HOLDING_ID/alias/$MGM_HOLDING_ID-session/category/SESSION_INIT/scheme/CORDA.ECDSA.SECP256R1)
-# echo "$RESPONSE" | jq .
-# SESSION_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
-
-# echo "HSM and session key created"
-# echo "sessison key: $SESSION_KEY_ID"
-
-# # ECDHキー(ネットワークメンバー認証用)の作成
-# curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MGM_HOLDING_ID/PRE_AUTH
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MGM_HOLDING_ID/alias/$MGM_HOLDING_ID-auth/category/PRE_AUTH/scheme/CORDA.ECDSA.SECP256R1)
-# echo "$RESPONSE" | jq .
-# ECDH_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
-
-# echo "HSM and ecdh key created"
-# echo "ecdh key: $ECDH_KEY_ID"
-
-# # クラスタレベルのP2P TLS通信キー作成(クラスタ単位で一度だけ実行)
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST -H "Content-Type: application/json" $REST_API_URL/key/p2p/alias/p2p-TLS/category/TLS/scheme/CORDA.RSA)
-# echo "$RESPONSE" | jq .
-# CLUSTER_TLS_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
-
-# echo "HSM and cluster tls key created"
-# echo "cluster tls key: $CLUSTER_TLS_KEY_ID"
-
-# # プライベートCA作成 /tmp/ca/ca/root-certificate.pemが作成される
-
-
-# if [ -e "/tmp/ca" ]; then
-#     rm -r /tmp/ca
-#     echo "private ca regenerate"
-# fi
-# cd "$RUNTIME_OS_PATH"
-# ./gradlew :applications:tools:p2p-test:fake-ca:clean :applications:tools:p2p-test:fake-ca:appJar
-# java -jar ./applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m /tmp/ca -a RSA -s 3072 ca
-# echo "private CA created"
-# cd "$WORK_DIR"
-# sleep 1
-# # キーの証明書リクエスト(CSR)を作成
-# if [[ -e "$WORK_DIR/$CERTIFICATE_REQUEST_PATH" ]]; then
-#     rm "$WORK_DIR/$CERTIFICATE_REQUEST_PATH"
-#     echo "cluster tls csr regenerate"
-# fi
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD  -X POST -H "Content-Type: application/json"  -i -d '{"x500Name": "CN=CordaOperator, C=GB, L=London, O=Org", "subjectAlternativeNames": ["'$P2P_GATEWAY_HOST'"]}' $REST_API_URL"/certificate/p2p/"$CLUSTER_TLS_KEY_ID > "$WORK_DIR"/"$CERTIFICATE_REQUEST_PATH")
-# echo "$RESPONSE" | jq .
-# echo "csr created"
-
-# # プライベートCAで証明書作成 /tmp/ca/request1/certificate.pemに作成される
-# sleep 1
-# if [[ -e "$WORK_DIR/$CERTIFICATE_PATH" ]]; then
-#     rm $WORK_DIR/$CERTIFICATE_PATH
-#     echo "key cluster tls certificate regenerate"
-# fi
-
-# cd "$RUNTIME_OS_PATH"
-# java -jar applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m /tmp/ca csr "$WORK_DIR"/"$CERTIFICATE_REQUEST_PATH"
-# echo "certificate created by private CA"
-# cd "$WORK_DIR"
-
-# # 証明書をCordaへアップロード
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -i -F certificate=@"$CERTIFICATE_PATH" -F alias=p2p-tls-cert $REST_API_URL/certificate/cluster/p2p-tls)
-# echo "cluster tls certificate uploaded to corda"
-
-# ビルド登録コンテキスト(MGMの根とワーク登録用)の作成
-
-SESSION_KEY_ID="96EE8A214097"
-ECDH_KEY_ID="245A307E0636"
-MGM_HOLDING_ID="24D49026C0C8"
-
-
-# TLS_CA_CERT=$(cat /tmp/ca/ca/root-certificate.pem | awk '{printf "%s\\n", $0}')
-# REGISTRATION_CONTEXT='{
-#   "corda.session.keys.0.id": "'$SESSION_KEY_ID'",
-#   "corda.ecdh.key.id": "'$ECDH_KEY_ID'",
-#   "corda.group.protocol.registration": "net.corda.membership.impl.registration.dynamic.member.DynamicMemberRegistrationService",
-#   "corda.group.protocol.synchronisation": "net.corda.membership.impl.synchronisation.MemberSynchronisationServiceImpl",
-#   "corda.group.protocol.p2p.mode": "Authenticated_Encryption",
-#   "corda.group.key.session.policy": "Distinct",
-#   "corda.group.pki.session": "NoPKI",
-#   "corda.group.pki.tls": "Standard",
-#   "corda.group.tls.type": "OneWay",
-#   "corda.group.tls.version": "1.3",
-#   "corda.endpoints.0.connectionURL": "https://'$P2P_GATEWAY_HOST':'$P2P_GATEWAY_PORT'",
-#   "corda.endpoints.0.protocolVersion": "1",
-#   "corda.group.trustroot.tls.0" : "'$TLS_CA_CERT'"
-# }'
-
-# # MGMのネットワークへの登録
-# REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CONTEXT'}}'
-# sleep 5
-# RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$MGM_HOLDING_ID)
-# echo "$RESPONSE" | jq .
-
-# MGMの通信プロパティ編集
-sleep 5
-RESPONSE=$(curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MGM_HOLDING_ID)
+# グループポリシー作成
+if [[ -e "$WORK_DIR/$GROUP_POLICY" ]]; then
+    rm  "$WORK_DIR/$GROUP_POLICY"
+    echo "group policy regenerate"
+fi
+# MGM仮想ノードのIDを取得
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
-echo "MGM setup finished"
+MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r '.virtualNodes[] | select(.holdingIdentity.x500Name == "O=MGM, L=London, C=GB") | .holdingIdentity.shortHash')
+sleep 5
+# グループポリシーファイルをMGMからエクスポート
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/mgm/$MGM_HOLDING_ID/info | jq . > "$WORK_DIR/$GROUP_POLICY"
+
+
+
+
+
+
+
+if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
+    rm  "$WORK_DIR/$KEY_STORE"
+    echo "key store regenerate"
+fi
+# Member CPI署名鍵作成
+keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "cn=Member - Signing Key 1, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+
+
+# CPB証明書をインポート
+
+keytool -importcert -keystore "$KEY_STORE" -storepass "$STORE_PASS" -noprompt -alias "r3-ca-key" -file "r3-ca-key.pem"
+keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias gradle-plugin-default-key -file gradle-plugin-default-key.pem
+sleep 1
+# Member CPI作成
+if [[ -e "$WORK_DIR/$MEMBER_CPI_FILE" ]]; then
+    rm "$WORK_DIR/$MEMBER_CPI_FILE"
+    echo "cpi file regenerate"
+fi
+corda-cli.sh package create-cpi \
+--group-policy "$WORK_DIR/GroupPolicy.json" \
+--cpb "$WORK_DIR/$MEMBER_CPB_FILE" \
+--cpi-name "Member" \
+--cpi-version "1.0.0.0-SNAPSHOT" \
+--file "$WORK_DIR/$MEMBER_CPI_FILE" \
+--keystore "$WORK_DIR/$KEY_STORE" \
+--storepass "$STORE_PASS" \
+--key "$KEY_ALIAS"
+echo "cpi created"
+sleep 1
+
+
+
+
+
+# 署名検証用の証明書作成
+if [[ -e "$WORK_DIR/$CPI_CERT" ]]; then
+    rm  "$WORK_DIR/$CPI_CERT"
+    echo "cpi singed cert regenerate"
+fi
+keytool -exportcert -rfc -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -file "$CPI_CERT"
+echo "CPI cert created"
+
+# 証明書をCordaへアップロード
+sleep 5
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="member-cpi-key-cert" -F certificate=@"$WORK_DIR/$CPI_CERT" $REST_API_URL/certificate/cluster/code-signer
+sleep 1
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="gradle-plugin-default-key" -F certificate=@"$WORK_DIR/$CORDA_DEFAULT_CERT" $REST_API_URL/certificate/cluster/code-signer
+sleep 1
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="r3-ca-key" -F certificate=@"$WORK_DIR/r3-ca-key.pem" $REST_API_URL/certificate/cluster/code-signer
+
+echo "CPI cert uploaded to corda"
+
+# CPIをCordaへアップロード
+sleep 5
+RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$MEMBER_CPI_FILE $REST_API_URL/cpi/)
+echo "$RESPONSE" | jq .
+echo "CPI uploaded to corda"
+CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
+
+# CPIチェックサム取得
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$CPI_ID)
+echo "$RESPONSE" | jq .
+CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
+
+# member仮想ノード作成
+X500_NAME="C=GB, L=London, O=Member"
+sleep 5
+echo '{ "request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "'$X500_NAME'"}}'
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d '{"request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "C=GB, L=London, O=Member"}}' $REST_API_URL/virtualnode)
+echo "$RESPONSE" | jq .
+echo "Member VNode created"
+
+
+REQUEST_ID=$(echo "$RESPONSE" | jq -r '.requestId')
+echo "request ID: $REQUEST_ID"
+
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/virtualnode/status/$REQUEST_ID)
+echo "$RESPONSE" | jq .
+MEMBER_HOLDING_ID=$(echo "$RESPONSE" | jq -r '.resourceId')
+echo "Member holding ID: $MEMBER_HOLDING_ID"
+
+# セッション開始キー(MGMとのTLS通信用)の作成
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MEMBER_HOLDING_ID/SESSION_INIT
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MEMBER_HOLDING_ID/alias/$MEMBER_HOLDING_ID-session/category/SESSION_INIT/scheme/CORDA.ECDSA.SECP256R1)
+echo "$RESPONSE" | jq .
+SESSION_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
+
+echo "HSM and session key created"
+echo "sessison key: $SESSION_KEY_ID"
+
+# 台帳キーの作成
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MEMBER_HOLDING_ID/LEDGER
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MEMBER_HOLDING_ID/alias/$MEMBER_HOLDING_ID-ledger/category/LEDGER/scheme/CORDA.ECDSA.SECP256R1)
+echo "$RESPONSE" | jq .
+LEDGER_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
+
+echo "HSM and session key created"
+echo "sessison key: $LEDGER_KEY_ID"
+
+# memberの通信プロパティ編集
+sleep 5
+curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MEMBER_HOLDING_ID
+echo " member communication property configured"
+
+
+# ビルド登録コンテキストの作成
+
+
+REGISTRATION_CONTEXT='{
+  "corda.session.keys.0.id": "'$SESSION_KEY_ID'",
+  "corda.session.keys.0.signature.spec": "SHA256withECDSA",
+  "corda.ledger.keys.0.id": "'$LEDGER_KEY_ID'",
+  "corda.ledger.keys.0.signature.spec": "SHA256withECDSA",
+  "corda.endpoints.0.connectionURL": "https://'$P2P_GATEWAY_HOST':'$P2P_GATEWAY_PORT'",
+  "corda.endpoints.0.protocolVersion": "1"
+}'
+
+# memberのネットワークへの登録
+REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CONTEXT'}}'
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$MEMBER_HOLDING_ID)
+echo "$RESPONSE" | jq .
