@@ -175,3 +175,10 @@ REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CO
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$MEMBER_HOLDING_ID)
 echo "$RESPONSE" | jq .
+
+# ネットワーク登録状況確認
+REGISTRATION_ID=$(echo "$RESPONSE" | jq -r '.registrationId')
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/membership/$MEMBER_HOLDING_ID/$REGISTRATION_ID)
+echo "$RESPONSE" | jq .
+echo "notary setup finished"

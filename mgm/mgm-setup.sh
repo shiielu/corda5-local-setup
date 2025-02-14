@@ -22,7 +22,7 @@ MGM_FILE="MGM-1.0.0.0-SNAPSHOT.cpi"
 KEY_CERT="mgm-cpi-cert.pem"
 
 
-RUNTIME_OS_PATH="/home/shiielu/corda5-2-local/corda-runtime-os"
+RUNTIME_OS_PATH="/home/shiielu/corda5-local-setup/corda-runtime-os"
 CERTIFICATE_REQUEST_PATH="request.csr"
 CERTIFICATE_PATH="/tmp/ca/request/certificate.pem"
 
@@ -196,6 +196,12 @@ REGISTRATION_CONTEXT='{
 REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CONTEXT'}}'
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$MGM_HOLDING_ID)
+echo "$RESPONSE" | jq .
+
+# ネットワーク登録状況確認
+REGISTRATION_ID=$(echo "$RESPONSE" | jq -r '.registrationId')
+sleep 5
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/membership/$MGM_HOLDING_ID/$REGISTRATION_ID)
 echo "$RESPONSE" | jq .
 
 # MGMの通信プロパティ編集
