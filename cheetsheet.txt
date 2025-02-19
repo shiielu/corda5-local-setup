@@ -85,10 +85,51 @@ java -jar ./applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m
 curl -k -u admin:admin -X PUT  -F certificate=@/tmp/ca/request1/certificate.pem -F alias=p2p-tls-cert https://localhost:8888/api/v1/certificates/cluster/p2p-tls
 
 
+CLIでCPKに再署名
+corda-cli.sh package sign \
+cordapp-template-java-1.0-SNAPSHOT.jar \
+--file signed-cordapp-template-java-1.0-SNAPSHOT.jar \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+corda-cli.sh package sign \
+contracts-1.0-SNAPSHOT.jar \
+--file signed-contracts-1.0-SNAPSHOT.jar \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+corda-cli.sh package sign \
+workflows-1.0-SNAPSHOT.jar \
+--file signed-workflows-1.0-SNAPSHOT.jar \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
 CLIでCPB作成
 corda-cli.sh package create-cpb \
-workflows-1.0-SNAPSHOT.jar contracts-1.0-SNAPSHOT.jar \
+signed-cordapp-template-java-1.0-SNAPSHOT.jar \
 --cpb-name cordapps-template-test \
+--cpb-version 1.0.0.0-SNAPSHOT \
+--file cordapps-template-test.cpb \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+corda-cli.sh package create-cpb \
+workflows-1.0-SNAPSHOT.jar contracts-1.0-SNAPSHOT.jar \
+--cpb-name signed-cordapps-template-test \
+--cpb-version 1.0.0.0-SNAPSHOT \
+--file cordapps-template-test.cpb \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+再署名版
+corda-cli.sh package create-cpb \
+signed-workflows-1.0-SNAPSHOT.jar signed-contracts-1.0-SNAPSHOT.jar \
+--cpb-name signed-cordapps-template-test \
 --cpb-version 1.0.0.0-SNAPSHOT \
 --file cordapps-template-test.cpb \
 --keystore signingkeys.pfx \
@@ -106,8 +147,24 @@ corda-cli.sh package create-cpi \
 --storepass "keystore password" \
 --key "testSigningKey"
 
+
+
+
 キーストア作成
 keytool -genkeypair -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -dname "cn=test key, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+
+キーストアから証明書エクスポート
+keytool -exportcert -rfc -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -file testSigningKey.pem
+自身の証明書インポート
+keytool -importcert -noprompt -alias "testSigningKeyCert" -keystore signingkeys.pfx -storepass "keystore password" -file testSigningKey.pem
+Notary証明書インポート
+keytool -importcert -noprompt -alias "NotaryKeyCert" -keystore signingkeys.pfx -storepass "keystore password" -file notary-ca-root.pem
+
+fake CAに署名してもらった証明書をインポート
+keytool -importcert -noprompt -alias "fakeCAtestSigningKeyCert" -keystore signingkeys.pfx -storepass "keystore password" -file /tmp/ca/testSigningKey/certificate.pem
+
+fake CAのroot証明書をインポート
+keytool -importcert -noprompt -alias "fakeCARoottestSigningKeyCert" -keystore signingkeys.pfx -storepass "keystore password" -file /tmp/ca/ca/root-certificate.pem
 
 自己署名
 keytool -selfcert -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -dname "cn=test key, o=R3, L=London, c=GB" -validity 4000
@@ -117,3 +174,33 @@ keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -no
 
 キーストアにr3rootキーをインポート
 keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias "r3-ca-key" -file "r3-ca-key.pem"
+
+CSR
+keytool -certreq -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -file testSigningKey.csr
+
+
+fake CAにCSRを送り、証明書作成
+./gradlew :applications:tools:p2p-test:fake-ca:clean :applications:tools:p2p-test:fake-ca:appJar
+
+java -jar ./applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m /tmp/ca -a RSA -s 3072 ca
+
+java -jar applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m /tmp/ca csr "/home/shiielu/corda5-local-setup/test/testSigningKey.csr"
+
+
+keytool -importcert -keystore /usr/lib/jvm/zulu17-ca-amd64/lib/security/cacerts -file testSigningKey.pem -alias testSigningKey
+↑パスワード changeit
+
+
+keytool -genkeypair -alias "cpiTestSigningKey" -keystore cpiSigningkeys.pfx -storepass "keystore password" -dname "cn=test key, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+
+
+検証
+jarsigner -verify -verbose  <cpk-file>
+
+
+keytool -importcert -noprompt -alias "testSigningKeyCert" -keystore signingkeys.pfx -storepass "keystore password" -file gradle-plugin-default-key.pem
+
+リセット
+corda-cli.sh vnode reset \
+--cpi MyCorDapp-1.0-SNAPSHOT.cpi \
+--insecure -u admin -p admin -t https://localhost:8888

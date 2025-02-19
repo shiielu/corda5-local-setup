@@ -67,15 +67,16 @@ echo "CPI cert created"
 
 
 # 証明書をCordaへアップロード
-sleep 5
+
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="mgm-cpi-key-cert" -F certificate=@"$WORK_DIR/$KEY_CERT" $REST_API_URL/certificate/cluster/code-signer
 echo "CPI cert uploaded to corda"
 
 # CPIをCordaへアップロード
-sleep 5
+
 RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$MGM_FILE $REST_API_URL/cpi/)
 echo "$RESPONSE" | jq .
 echo "CPI uploaded to corda"
+
 CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
 
 
@@ -83,10 +84,11 @@ CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$CPI_ID)
 echo "$RESPONSE" | jq .
+CPI_STATUS=$(echo "$RESPONSE" | jq -r '.status')
 CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
 
 # MGM仮想ノード作成
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "{\"request\": {\"cpiFileChecksum\": \"$CPI_CHECKSUM\", \"x500Name\": \"$MGM_VNODE_X500_NAME\"}}" $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
 echo "MGM VNode created"
@@ -103,7 +105,7 @@ echo "MGM holding ID: $MGM_HOLDING_ID"
 
 # セッション開始キー(MGMとのTLS通信用)の作成
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MGM_HOLDING_ID/SESSION_INIT
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MGM_HOLDING_ID/alias/$MGM_HOLDING_ID-session/category/SESSION_INIT/scheme/CORDA.ECDSA.SECP256R1)
 echo "$RESPONSE" | jq .
 SESSION_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
@@ -113,7 +115,7 @@ echo "sessison key: $SESSION_KEY_ID"
 
 # ECDHキー(ネットワークメンバー認証用)の作成
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$MGM_HOLDING_ID/PRE_AUTH
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$MGM_HOLDING_ID/alias/$MGM_HOLDING_ID-auth/category/PRE_AUTH/scheme/CORDA.ECDSA.SECP256R1)
 echo "$RESPONSE" | jq .
 ECDH_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
@@ -122,7 +124,7 @@ echo "HSM and ecdh key created"
 echo "ecdh key: $ECDH_KEY_ID"
 
 # クラスタレベルのP2P TLS通信キー作成(クラスタ単位で一度だけ実行)
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST -H "Content-Type: application/json" $REST_API_URL/key/p2p/alias/p2p-TLS/category/TLS/scheme/CORDA.RSA)
 echo "$RESPONSE" | jq .
 CLUSTER_TLS_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
@@ -148,7 +150,7 @@ if [[ -e "$WORK_DIR/$CERTIFICATE_REQUEST_PATH" ]]; then
     rm "$WORK_DIR/$CERTIFICATE_REQUEST_PATH"
     echo "cluster tls csr regenerate"
 fi
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD  -X POST -H "Content-Type: application/json"  -i -d '{"x500Name": "CN=CordaOperator, C=GB, L=London, O=Org", "subjectAlternativeNames": ["'$P2P_GATEWAY_HOST'"]}' $REST_API_URL"/certificate/p2p/"$CLUSTER_TLS_KEY_ID > "$WORK_DIR"/"$CERTIFICATE_REQUEST_PATH")
 echo "$RESPONSE" | jq .
 echo "csr created"
@@ -166,7 +168,7 @@ echo "certificate created by private CA"
 cd "$WORK_DIR"
 
 # 証明書をCordaへアップロード
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -i -F certificate=@"$CERTIFICATE_PATH" -F alias=p2p-tls-cert $REST_API_URL/certificate/cluster/p2p-tls)
 echo "cluster tls certificate uploaded to corda"
 
@@ -192,7 +194,7 @@ REGISTRATION_CONTEXT='{
 
 # MGMのネットワークへの登録
 REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CONTEXT'}}'
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$MGM_HOLDING_ID)
 echo "$RESPONSE" | jq .
 
@@ -203,6 +205,6 @@ RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/membership
 echo "$RESPONSE" | jq .
 
 # MGMの通信プロパティ編集
-sleep 5
+
 curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MGM_HOLDING_ID
 echo "MGM setup finished"

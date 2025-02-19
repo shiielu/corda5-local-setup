@@ -40,13 +40,13 @@ if [[ -e "$WORK_DIR/$GROUP_POLICY" ]]; then
     echo "group policy regenerate"
 fi
 # MGM仮想ノードのIDを取得
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
 MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r --arg xname "$MGM_VNODE_X500_NAME"  '.virtualNodes[] | select(.holdingIdentity.x500Name == $xname) | .holdingIdentity.shortHash')
 echo $MGM_HOLDING_ID
 
-sleep 5
+
 # グループポリシーファイルをMGMからエクスポート
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/mgm/$MGM_HOLDING_ID/info | jq . > "$WORK_DIR/$GROUP_POLICY"
 
@@ -92,14 +92,14 @@ keytool -exportcert -rfc -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "
 echo "CPI cert created"
 
 # 証明書をCordaへアップロード
-sleep 5
+
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="notary-cpi-key" -F certificate=@"$WORK_DIR/$NOTARY_CPB_CERT" $REST_API_URL/certificate/cluster/code-signer
 sleep 1
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="notary-ca-root-key" -F certificate=@"$WORK_DIR/$KEY_CERT" $REST_API_URL/certificate/cluster/code-signer
 echo "CPI cert uploaded to corda"
 
 # CPIをCordaへアップロード
-sleep 5
+
 RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$NOTARY_CPI_FILE $REST_API_URL/cpi/)
 echo "$RESPONSE" | jq .
 echo "CPI uploaded to corda"
@@ -112,7 +112,7 @@ echo "$RESPONSE" | jq .
 CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
 
 # Notary仮想ノード作成
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "{\"request\": {\"cpiFileChecksum\": \"$CPI_CHECKSUM\", \"x500Name\": \"$NOTARY_VNODE_X500_NAME\"}}" $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
 echo "Notary VNode created"
@@ -129,7 +129,7 @@ echo "Notary holding ID: $NOTARY_HOLDING_ID"
 
 # セッション開始キー(MGMとのTLS通信用)の作成
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$NOTARY_HOLDING_ID/SESSION_INIT
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$NOTARY_HOLDING_ID/alias/$NOTARY_HOLDING_ID-session/category/SESSION_INIT/scheme/CORDA.ECDSA.SECP256R1)
 echo "$RESPONSE" | jq .
 SESSION_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
@@ -139,7 +139,7 @@ echo "sessison key: $SESSION_KEY_ID"
 
 # Notary keyの作成
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/hsm/soft/$NOTARY_HOLDING_ID/NOTARY
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X POST $REST_API_URL/key/$NOTARY_HOLDING_ID/alias/$NOTARY_HOLDING_ID-notary/category/NOTARY/scheme/CORDA.ECDSA.SECP256R1)
 echo "$RESPONSE" | jq .
 NOTARY_KEY_ID=$(echo "$RESPONSE" | jq -r '.id')
@@ -148,7 +148,7 @@ echo "HSM and notary key created"
 echo "notary key: $SESSION_KEY_ID"
 
 # notaryの通信プロパティ編集
-sleep 5
+
 curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$NOTARY_HOLDING_ID
 echo " notary communication property configured"
 
@@ -170,7 +170,7 @@ REGISTRATION_CONTEXT='{
 
 # notaryのネットワークへの登録
 REGISTRATION_REQUEST='{"memberRegistrationRequest":{"context": '$REGISTRATION_CONTEXT'}}'
-sleep 5
+
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "$REGISTRATION_REQUEST" $REST_API_URL/membership/$NOTARY_HOLDING_ID)
 echo "$RESPONSE" | jq .
 
