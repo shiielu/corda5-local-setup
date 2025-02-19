@@ -28,6 +28,10 @@ CERTIFICATE_REQUEST_PATH="request.csr"
 CERTIFICATE_PATH="/tmp/ca/request/certificate.pem"
 NOTARY_CPB_CERT="notary-ca-root.pem"
 GROUP_POLICY="GroupPolicy.json"
+MGM_VNODE_X500_NAME="CN=MGM, O=Local, L=London, C=GB"
+NOTARY_KEY_X500_NAME="CN=Notary CPI Signing Key, O=R3, L=London, C=GB"
+NOTARY_VNODE_X500_NAME="CN=Notary, O=Local, L=London, C=GB"
+NOTARY_SERVICE_X500_NAME="CN=NotaryService, O=Local, L=London, C=GB"
 
 
 # グループポリシー作成
@@ -39,7 +43,9 @@ fi
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
-MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r '.virtualNodes[] | select(.holdingIdentity.x500Name == "O=MGM, L=London, C=GB") | .holdingIdentity.shortHash')
+MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r --arg xname "$MGM_VNODE_X500_NAME"  '.virtualNodes[] | select(.holdingIdentity.x500Name == $xname) | .holdingIdentity.shortHash')
+echo $MGM_HOLDING_ID
+
 sleep 5
 # グループポリシーファイルをMGMからエクスポート
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/mgm/$MGM_HOLDING_ID/info | jq . > "$WORK_DIR/$GROUP_POLICY"
@@ -50,7 +56,7 @@ if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
     echo "key store regenerate"
 fi
 #Notary CPI署名鍵作成
-keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "cn=Notary - Signing Key 1, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "$NOTARY_KEY_X500_NAME" -keyalg RSA -storetype pkcs12 -validity 4000
 
 
 # CPB証明書をインポート
@@ -106,10 +112,8 @@ echo "$RESPONSE" | jq .
 CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
 
 # Notary仮想ノード作成
-X500_NAME="C=GB, L=London, O=Notary"
 sleep 5
-echo '{ "request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "'$X500_NAME'"}}'
-RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d '{"request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "C=GB, L=London, O=Notary"}}' $REST_API_URL/virtualnode)
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "{\"request\": {\"cpiFileChecksum\": \"$CPI_CHECKSUM\", \"x500Name\": \"$NOTARY_VNODE_X500_NAME\"}}" $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
 echo "Notary VNode created"
 
@@ -159,7 +163,7 @@ REGISTRATION_CONTEXT='{
   "corda.endpoints.0.connectionURL": "https://'$P2P_GATEWAY_HOST':'$P2P_GATEWAY_PORT'",
   "corda.endpoints.0.protocolVersion": "1",
   "corda.roles.0": "notary",
-  "corda.notary.service.name": "C=GB, L=London, O=Notary",
+  "corda.notary.service.name": "'$NOTARY_SERVICE_X500_NAME'",
   "corda.notary.service.flow.protocol.name": "com.r3.corda.notary.plugin.nonvalidating",
   "corda.notary.service.flow.protocol.version.0": "1"
 }'

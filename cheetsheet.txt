@@ -83,3 +83,37 @@ java -jar ./applications/tools/p2p-test/fake-ca/build/bin/corda-fake-ca-*.jar -m
 証明書をアップロード
 
 curl -k -u admin:admin -X PUT  -F certificate=@/tmp/ca/request1/certificate.pem -F alias=p2p-tls-cert https://localhost:8888/api/v1/certificates/cluster/p2p-tls
+
+
+CLIでCPB作成
+corda-cli.sh package create-cpb \
+workflows-1.0-SNAPSHOT.jar contracts-1.0-SNAPSHOT.jar \
+--cpb-name cordapps-template-test \
+--cpb-version 1.0.0.0-SNAPSHOT \
+--file cordapps-template-test.cpb \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+CLIでCPI作成
+corda-cli.sh package create-cpi \
+--cpb cordapps-template-test.cpb \
+--group-policy GroupPolicy.json \
+--cpi-name "cordapps-template-test" \
+--cpi-version "1.0.0.0-SNAPSHOT" \
+--file cordapps-template-test.cpi \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+キーストア作成
+keytool -genkeypair -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -dname "cn=test key, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+
+自己署名
+keytool -selfcert -alias "testSigningKey" -keystore signingkeys.pfx -storepass "keystore password" -dname "cn=test key, o=R3, L=London, c=GB" -validity 4000
+
+キーストアにgradleデフォルトキーをインポート
+keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias gradle-plugin-default-key -file gradle-plugin-default-key.pem
+
+キーストアにr3rootキーをインポート
+keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias "r3-ca-key" -file "r3-ca-key.pem"

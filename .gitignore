@@ -31,3 +31,4 @@ corda-dev-prereqs/
 *.pem
 *.cpb
 *.cpi
+.idea/

@@ -26,7 +26,8 @@ RUNTIME_OS_PATH="/home/shiielu/corda5-local-setup/corda-runtime-os"
 CERTIFICATE_REQUEST_PATH="request.csr"
 CERTIFICATE_PATH="/tmp/ca/request/certificate.pem"
 
-
+MGM_KEY_X500NAME="CN=MGM CPI Signing Key, O=R3, L=London, C=GB"
+MGM_VNODE_X500_NAME="CN=MGM, O=Local, L=London, C=GB"
 
 #MGM CPI署名鍵作成
 
@@ -35,7 +36,7 @@ if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
     rm  "$WORK_DIR/$KEY_STORE"
     echo "key store regenerate"
 fi
-keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "cn=CPI Plugin Example - Signing Key 1, o=R3, L=London, c=GB" -keyalg RSA -storetype pkcs12 -validity 4000
+keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "$MGM_KEY_X500NAME" -keyalg RSA -storetype pkcs12 -validity 4000
 sleep 1
 
 # MGM CPI作成
@@ -84,12 +85,9 @@ RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status
 echo "$RESPONSE" | jq .
 CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
 
-
 # MGM仮想ノード作成
-X500_NAME="C=GB, L=London, O=MGM"
 sleep 5
-echo '{ "request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "'$X500_NAME'"}}'
-RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d '{"request": {"cpiFileChecksum": "'$CPI_CHECKSUM'", "x500Name": "C=GB, L=London, O=MGM"}}' $REST_API_URL/virtualnode)
+RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD -d "{\"request\": {\"cpiFileChecksum\": \"$CPI_CHECKSUM\", \"x500Name\": \"$MGM_VNODE_X500_NAME\"}}" $REST_API_URL/virtualnode)
 echo "$RESPONSE" | jq .
 echo "MGM VNode created"
 

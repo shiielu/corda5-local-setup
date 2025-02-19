@@ -1,6 +1,6 @@
 {
   "fileFormatVersion": 1,
-  "groupId": "687a62cf-854d-4eb0-a0cf-79e5285ebc67",
+  "groupId": "ac49be3d-2d7e-4499-8fbd-077529edc407",
   "registrationProtocol": "net.corda.membership.impl.registration.dynamic.member.DynamicMemberRegistrationService",
   "synchronisationProtocol": "net.corda.membership.impl.synchronisation.MemberSynchronisationServiceImpl",
   "protocolParameters": {
@@ -8,7 +8,7 @@
   },
   "p2pParameters": {
     "tlsTrustRoots": [
-      "-----BEGIN CERTIFICATE-----\nMIIENTCCAp2gAwIBAgIBAjANBgkqhkiG9w0BAQsFADBNMQswCQYDVQQGEwJVSzEP\nMA0GA1UEAwwGcjMuY29tMS0wKwYDVQQLDCRlMWIzOTQzYy00ZmQ1LTQ4YmUtYTY4\nMC03OWEyMmU3Zjk2OWQwHhcNMjUwMjA3MDUzNzQ5WhcNMjUwMzA5MDUzNzQ5WjBN\nMQswCQYDVQQGEwJVSzEPMA0GA1UEAwwGcjMuY29tMS0wKwYDVQQLDCRlMWIzOTQz\nYy00ZmQ1LTQ4YmUtYTY4MC03OWEyMmU3Zjk2OWQwggGiMA0GCSqGSIb3DQEBAQUA\nA4IBjwAwggGKAoIBgQDgR7+LHeCtKHM/Ij8+aSs+hYZduoW9jh+Gksz0SRa31e16\n02Qyyckb4nAzfhdZfPNxVWaFkIsQnju2gghAs5TIRdA6TfpY90XNuwEqF7U6EcQn\n/CjPkQb+vml9HaX4B/NbO0cFR5N1eD0MnqvIUeC21caiJSrAl7hbzE9TPAEUVNeD\n2i8LIEcZNWSDgrxTLxTlZqk7vdTqp6IYGHNnmT7jRzj1cqetGtkOu2p+Loo2XvVX\nqas1wOzvf1k45y/kImYkBe3cjT47xumi+eDSENolVilKQ0K4eA8cgsZXWkGIbZgH\nYyCGYZLhK9mJ1aCVxL97uwzQ+C7Ibzl6mYxMh0K8A9RORznrDq7pjzmibpO59wrC\nnESr8jpVxtqaBEHPPPWz3JcPj6FwLskO3j7vpg712GFNhIl2GpUNhF9n9NojcOsz\nsK74iw5MJbxRNPmYHgMPiqG2AznCR7Gwz/mWCLKUPf8AqxY1YOZnn9xmOHNQfI+J\n0sxTPyKCrNii8ohK9pMCAwEAAaMgMB4wDwYDVR0TAQH/BAUwAwEB/zALBgNVHQ8E\nBAMCAa4wDQYJKoZIhvcNAQELBQADggGBAKCwNwJaC7ZXW+8/V3H8tnzf8pYohspx\nsXhnE8xneaVPhVROxtkyddcvzjBzpZRfM5bzSbud6Z/6nvV9HAPjM+SISOFzwnOV\nnqH5joqZ2g6gH9Z4tXimV6Lu46Jj+Ye8o7uxQ5uximzf/LlFITgEq9AEK6G3+ORI\n2cGKL3auG38vjcoMlovi3b5knITprNJvgaulEQNrMPg2OAHzU2xBCHXFYays5IaZ\n9XdSqrIQfz7ejViNmSFN3fOjs1U/qJW+EtYSyOW4JbI/Wy8Y/DM9B1tIpjicx8s4\nbk1YoMvZwhYSOCj0QGkxew8cKAjhSNXJyHk/cna+JtqsVamKZS0MZisfUOZ6gTok\nJEQdtMBL98YsOkIldkevWMYgqo9xMNrJRyDqpFgrCHwtx1Zbkfu2y0K35u6RWKPF\ni6OineNESSZib9hLP80C3gfsi3sgSHaCaYeUjoXwEwqd2oAKbyqyy4A+06mhdWX1\n+YoKgzp1VTUk3Phy20zfylDkwBwtcIX0Jw==\n-----END CERTIFICATE-----\n"
+      "-----BEGIN CERTIFICATE-----\nMIIENTCCAp2gAwIBAgIBAjANBgkqhkiG9w0BAQsFADBNMQswCQYDVQQGEwJVSzEP\nMA0GA1UEAwwGcjMuY29tMS0wKwYDVQQLDCRjMTE3NmIwZS1jMGY2LTRhYWUtYWM5\nNi1mODE5YzVhMmY3MGQwHhcNMjUwMjE4MDQyODE5WhcNMjUwMzIwMDQyODE5WjBN\nMQswCQYDVQQGEwJVSzEPMA0GA1UEAwwGcjMuY29tMS0wKwYDVQQLDCRjMTE3NmIw\nZS1jMGY2LTRhYWUtYWM5Ni1mODE5YzVhMmY3MGQwggGiMA0GCSqGSIb3DQEBAQUA\nA4IBjwAwggGKAoIBgQC24CRFrPu+VJ51282I2nTVcgol3yXKP10aMDS9rKezD2Zd\neWJHJoT/Ps2PleATeNcLo/gtZUSeBQ9UriDDDTzhFB8ia6ECHi9b4Oi8sf+ZAyWr\ng0tRk4Jap2OI6WUIQynwdvTwJgDPmW+JZHfc1Bat+hzdD/U9LwPThlJI/O4ORUCj\nGiGYZlIF5aa1t/4pIdn0ShzkQCO/qWCHtZbZFz9hmHsd4p07EvLFg+fDivUFSk+k\nvJ5gmU3lMfpU1Rn3aHqV8p+cQ93zsQcxy9QKkQE14OtQwL2+7h5v2BeQTJlW0E3T\nSQvY4bbNThgUkZ1QO54UGQBD0vmwtKb/EYv0CLxxWHUmhe7vF2QbOh6oDKUFsR+l\nxU6NsJmy4YaxS2r1hM+ofIYVPRXe9C9lPtvNzJ8+rQDuEb5jDe4N6G55DWA0UfiO\nNaY89nX0XduP+IJw5lOKvislcTwFB5fRkE3Vxn4hmh+gVlu1kEdNFTWEzofw25Ob\nqzGaho2PgDgK7gOzFPkCAwEAAaMgMB4wDwYDVR0TAQH/BAUwAwEB/zALBgNVHQ8E\nBAMCAa4wDQYJKoZIhvcNAQELBQADggGBAHqZXmeURysA47Qc7HtRBLhli12/DlrR\noMTG6HlmPrmUtjv3n1sNizkACODjkzIKVnUPGUS5eOJgJvRaT9rJddJNcN4PpeUn\nbNyz4cnrO4f13+qqY+yOHCMLgIRXA3O7SDqCNAApQh6oIRYukIHbuQhDCBrZKHk6\nDJi/zVFZq/cntdhT3bpBuj9NDZIwYc7wdN18NJrggiooetCoi7vBMBL0LQxiQ78s\nCO6WpkD340eM/k+pjralLIZgEhUiQ5Krc2Xcmj0SIMSiHY7midVsb26BZnc+Yjtd\n0EK8IXtFhZsN8+plwPSdNKGhKXYlx2N2AqbCUYg39p76U93EzejcugOqTfrrbDZG\nvutEwLJgIsQevc/nmfXPQrBuszgGssL4dW06lVX5zSULvST3stktxbmdg8TM7Fjy\nFlbybO2PMTwklhB2eRdAYEP7HqY0ZawJkqeBJfksnRm5TRrusd7mGcMJVrv0RUnv\nZLFZLgqTniyL1MpkPzfC9tbR6TRi8gx+8g==\n-----END CERTIFICATE-----\n"
     ],
     "sessionPki": "NoPKI",
     "tlsPki": "Standard",
@@ -18,15 +18,15 @@
   },
   "mgmInfo": {
     "corda.cpi.name": "MGM",
-    "corda.cpi.signer.summary.hash": "SHA-256:954202EC14D5AE47B67429318FC819F8CDEE442A17499CC2E04AA498E144E859",
+    "corda.cpi.signer.summary.hash": "SHA-256:1FAF3E5E9AF5D6B823CAA88B938EBDBEE2478F2782943C82ED4EDE8C0D46784B",
     "corda.cpi.version": "1.0.0.0-SNAPSHOT",
-    "corda.ecdh.key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcB8TBUjnJ/9A/JAErIqPMW337tWz\nfLyvl3K6P+X3mYL8uiASq35QrRdF0Md8WnFRhZcEQFid1awPGL7FebaT4Q==\n-----END PUBLIC KEY-----\n",
+    "corda.ecdh.key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELRHnD49r5yZJuELkucKbi9a2jazn\nibr9CT4+mTMyJT8N8D8uEvnh6gN5PVuHwXfD9uV82uo6R/LtNNvgYztvcQ==\n-----END PUBLIC KEY-----\n",
     "corda.endpoints.0.connectionURL": "https://corda-p2p-gateway-worker.corda:8080",
     "corda.endpoints.0.protocolVersion": "1",
-    "corda.groupId": "687a62cf-854d-4eb0-a0cf-79e5285ebc67",
-    "corda.name": "O=MGM, L=London, C=GB",
-    "corda.session.keys.0.hash": "SHA-256:61340221FBF877822DC2D872F40BCCD7D91B8ADF160AE4E00F9F56E18EE5B79E",
-    "corda.session.keys.0.pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIriX/s8GCPxicVpAwUeiUYkR6yMn\n5mMXZSAYK6pKHsrXwAzgR6sV4VLBp9vYfWbn0Bt5FtnGa+0gHxo/4w8Efw==\n-----END PUBLIC KEY-----\n",
+    "corda.groupId": "ac49be3d-2d7e-4499-8fbd-077529edc407",
+    "corda.name": "CN=MGM, O=Local, L=London, C=GB",
+    "corda.session.keys.0.hash": "SHA-256:810090BF7703876E622B6F1E07405A358D62C60BE8855556E4D7A6FF38B35A5F",
+    "corda.session.keys.0.pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEsmrYq1D3tUMmNbpd6OwEsno9sF3O\nESVkEX8S8+yssEKjMExWMNTrTWZqsQVXfLlsQe4BibG/C+CyJDLbAke0fg==\n-----END PUBLIC KEY-----\n",
     "corda.softwareVersion": "5.2.0.0",
     "corda.platformVersion": "50200",
     "corda.serial": "1"
