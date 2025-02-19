@@ -33,3 +33,6 @@ corda-gradle-plugins/
 *.cpb
 *.cpi
 .idea/
+
+notary/GroupPolicy.json
+member/GroupPolicy.json
