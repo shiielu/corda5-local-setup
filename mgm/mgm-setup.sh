@@ -207,4 +207,7 @@ echo "$RESPONSE" | jq .
 # MGMの通信プロパティ編集
 
 curl -i -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"p2pTlsCertificateChainAlias": "p2p-tls-cert", "useClusterLevelTlsCertificateAndKey": true, "sessionKeysAndCertificates": [{"sessionKeyId": "'$SESSION_KEY_ID'", "preferred": true}]}' $REST_API_URL/network/setup/$MGM_HOLDING_ID
+REGISTRATION_STATUS=$(echo "$RESPONSE" | jq -r '.registrationStatus')
+echo "registration status: "$REGISTRATION_STATUS""
+
 echo "MGM setup finished"

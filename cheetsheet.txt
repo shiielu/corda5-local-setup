@@ -12,7 +12,7 @@ helm install prereqs -n corda corda-dev-prereqs/charts/corda-dev-prereqs --timeo
 
 helm install corda -n corda corda --values corda/values-prereqs.yaml --debug
 
-kubectl port-forward --namespace corda deployment/corda-rest-worker 8888 &
+kubectl port-forward --namespace corda deployment/corda-rest-worker 8888 
 
 
 
@@ -93,6 +93,14 @@ cordapp-template-java-1.0-SNAPSHOT.jar \
 --storepass "keystore password" \
 --key "testSigningKey"
 
+
+corda-cli.sh package sign \
+notary-plugins-5.2.0.0-SNAPSHOT.jar \
+--file signed-notary-plugins-5.2.0.0-SNAPSHOT.jar \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
 corda-cli.sh package sign \
 contracts-1.0-SNAPSHOT.jar \
 --file signed-contracts-1.0-SNAPSHOT.jar \
@@ -111,6 +119,15 @@ CLIでCPB作成
 corda-cli.sh package create-cpb \
 signed-cordapp-template-java-1.0-SNAPSHOT.jar \
 --cpb-name cordapps-template-test \
+--cpb-version 1.0.0.0-SNAPSHOT \
+--file cordapps-template-test.cpb \
+--keystore signingkeys.pfx \
+--storepass "keystore password" \
+--key "testSigningKey"
+
+corda-cli.sh package create-cpb \
+workflows-1.0-SNAPSHOT.jar contracts-1.0-SNAPSHOT.jar signed-notary-plugins-5.2.0.0-SNAPSHOT.jar \
+--cpb-name signed-cordapps-template-test \
 --cpb-version 1.0.0.0-SNAPSHOT \
 --file cordapps-template-test.cpb \
 --keystore signingkeys.pfx \
@@ -204,3 +221,140 @@ keytool -importcert -noprompt -alias "testSigningKeyCert" -keystore signingkeys.
 corda-cli.sh vnode reset \
 --cpi MyCorDapp-1.0-SNAPSHOT.cpi \
 --insecure -u admin -p admin -t https://localhost:8888
+
+
+
+curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -d '{"section":"corda.messaging", "version":"1", "config":"{"maxAllowedMessageSize":972800,"publisher":{"closeTimeout":600,"transactional":true},"subscription":{"commitRetries":3,"pollTimeout":500,"processorRetries":3,"processorTimeout":15000,"subscribeRetries":3,"threadStopTimeout":10000}}", "schemaVersion": {"major": 1, "minor": 0}}' "$REST_API_URL/config"
+
+curl -k -u admin:admin -X PUT -d '{"section":"corda.security", "version":"1", "config":"{"policy":"medium_security.policy"}", "schemaVersion": {"major": 1, "minor": 0}}' "https://127.0.0.1:8888/api/v5_2/config"
+
+
+
+
+
+ALLOW {
+[org.osgi.service.condpermadmin.BundleLocationCondition "FLOW/*"]
+
+(java.lang.RuntimePermission "accessClassInPackage.net.corda.v5.*" "")
+(org.osgi.framework.PackagePermission "net.corda.v5.*" "import")
+(org.osgi.framework.ServicePermission "net.corda.v5.*" "get")
+(org.osgi.framework.ServicePermission "(location=FLOW/*)" "get")
+
+(org.osgi.framework.PackagePermission "co.paralleluniverse.fibers.suspend" "import")
+
+(net.corda.internal.serialization.amqp.CustomSerializerPermission "FLOW")
+
+} "Allow public packages and services for FLOW Sandbox"
+
+DENY {
+[org.osgi.service.condpermadmin.BundleLocationCondition "FLOW/*"]
+
+(org.osgi.framework.AdminPermission "*" "*")
+(org.osgi.framework.BundlePermission "*" "host,fragment")
+(org.osgi.framework.PackagePermission "org.osgi.framework" "import")
+(org.osgi.framework.PackagePermission "org.osgi.service.component" "import")
+(org.osgi.framework.PackagePermission "net.corda" "exportonly,import")
+(org.osgi.framework.PackagePermission "net.corda.*" "exportonly,import")
+(org.osgi.framework.ServicePermission "org.osgi.framework.hooks.*" "register")
+(org.osgi.framework.ServicePermission "*" "get")
+
+(org.osgi.framework.PackagePermission "co.paralleluniverse.asm" "import")
+(org.osgi.framework.PackagePermission "co.paralleluniverse.asm.*" "import")
+(org.osgi.framework.PackagePermission "co.paralleluniverse.common.*" "import")
+(org.osgi.framework.PackagePermission "co.paralleluniverse.fibers.*" "import")
+(co.paralleluniverse.fibers.instrument.QuasarPermission "configuration" "")
+
+(net.corda.internal.serialization.amqp.CustomSerializerPermission "*")
+
+(java.io.SerializablePermission "enableSubclassImplementation" "")
+(java.io.SerializablePermission "enableSubstitution" "")
+(java.lang.management.ManagementPermission "control" "")
+(java.lang.management.ManagementPermission "monitor" "")
+(java.lang.RuntimePermission "createClassLoader" "")
+(java.lang.RuntimePermission "getClassLoader" "")
+(java.lang.RuntimePermission "setContextClassLoader" "")
+(java.lang.RuntimePermission "enableContextClassLoaderOverride" "")
+(java.lang.RuntimePermission "closeClassLoader" "")
+(java.lang.RuntimePermission "setSecurityManager" "")
+(java.lang.RuntimePermission "createSecurityManager"  "")
+(java.lang.RuntimePermission "getenv.*" "")
+(java.lang.RuntimePermission "exitVM" "")
+(java.lang.RuntimePermission "shutdownHooks" "")
+(java.lang.RuntimePermission "setFactory" "")
+(java.lang.RuntimePermission "setIO" "")
+(java.lang.RuntimePermission "modifyThread" "")
+(java.lang.RuntimePermission "stopThread" "")
+(java.lang.RuntimePermission "modifyThreadGroup" "")
+(java.lang.RuntimePermission "getProtectionDomain" "")
+(java.lang.RuntimePermission "loadLibrary.*" "")
+(java.lang.RuntimePermission "accessClassInPackage.net.corda.*" "")
+(java.lang.RuntimePermission "defineClassInPackage.*" "")
+(java.lang.RuntimePermission "queuePrintJob" "")
+(java.lang.RuntimePermission "getStackTrace" "")
+(java.lang.RuntimePermission "setDefaultUncaughtExceptionHandler" "")
+(java.lang.RuntimePermission "preferences" "")
+(java.net.NetPermission "setDefaultAuthenticator" "")
+(java.net.NetPermission "requestPasswordAuthentication" "")
+(java.net.NetPermission "specifyStreamHandler" "")
+(java.net.NetPermission "setProxySelector" "")
+(java.net.NetPermission "getProxySelector" "")
+(java.net.NetPermission "setCookieHandler" "")
+(java.net.NetPermission "getCookieHandler" "")
+(java.net.NetPermission "setResponseCache" "")
+(java.net.NetPermission "getResponseCache" "")
+(java.net.SocketPermission "*" "accept,listen,connect,resolve")
+(java.net.URLPermission "http://*:*" "*:*")
+(java.net.URLPermission "https://*:*" "*:*")
+(java.nio.file.LinkPermission "hard" "")
+(java.nio.file.LinkPermission "symbolic" "")
+(java.security.SecurityPermission "createAccessControlContext" "")
+(java.security.SecurityPermission "getDomainCombiner" "")
+(java.security.SecurityPermission "getPolicy" "")
+(java.security.SecurityPermission "setPolicy" "")
+(java.security.SecurityPermission "createPolicy.*" "")
+(java.security.SecurityPermission "getProperty.*" "")
+(java.security.SecurityPermission "setProperty.*" "")
+(java.security.SecurityPermission "insertProvider" "")
+(java.security.SecurityPermission "removeProvider.*" "")
+(java.security.SecurityPermission "clearProviderProperties.*" "")
+(java.security.SecurityPermission "putProviderProperty.*" "")
+(java.security.SecurityPermission "removeProviderProperty.*" "")
+(java.sql.SQLPermission "setLog" "")
+(java.sql.SQLPermission "callAbort" "")
+(java.sql.SQLPermission "setSyncFactory" "")
+(java.sql.SQLPermission "setNetworkTimeout" "")
+(java.sql.SQLPermission "deregisterDriver" "")
+(java.util.PropertyPermission "*" "read,write")
+(javax.management.MBeanPermission "*" "*")
+(javax.management.MBeanServerPermission "*" "")
+(javax.management.MBeanTrustPermission "*" "")
+(javax.management.remote.SubjectDelegationPermission "*" "")
+(javax.net.ssl.SSLPermission "setHostnameVerifier" "")
+(javax.net.ssl.SSLPermission "getSSLSessionContext" "")
+(javax.net.ssl.SSLPermission "setDefaultSSLContext" "")
+(javax.security.auth.AuthPermission "doAs" "")
+(javax.security.auth.AuthPermission "doAsPrivileged" "")
+(javax.security.auth.AuthPermission "getSubject" "")
+(javax.security.auth.AuthPermission "getSubjectFromDomainCombiner" "")
+(javax.security.auth.AuthPermission "setReadOnly" "")
+(javax.security.auth.AuthPermission "modifyPrincipals" "")
+(javax.security.auth.AuthPermission "modifyPublicCredentials" "")
+(javax.security.auth.AuthPermission "modifyPrivateCredentials" "")
+(javax.security.auth.AuthPermission "refreshCredential" "")
+(javax.security.auth.AuthPermission "destroyCredential" "")
+(javax.security.auth.AuthPermission "createLoginContext.*" "")
+(javax.security.auth.AuthPermission "getLoginConfiguration" "")
+(javax.security.auth.AuthPermission "setLoginConfiguration" "")
+(javax.security.auth.AuthPermission "createLoginConfiguration.*" "")
+(javax.security.auth.AuthPermission "refreshLoginConfiguration" "")
+(javax.security.auth.PrivateCredentialPermission "*" "")
+(javax.sound.sampled.AudioPermission "play" "")
+(javax.sound.sampled.AudioPermission "record" "")
+(javax.xml.bind.JAXBPermission "setDatatypeConverter" "")
+(javax.xml.ws.WebServicePermission "publishEndpoint" "")
+(java.io.FilePermission "<<ALL FILES>>" "read,write,delete,execute,readLink")
+(java.lang.RuntimePermission "getFileSystemAttributes" "")
+(java.lang.RuntimePermission "readFileDescriptor" "")
+(java.lang.RuntimePermission "writeFileDescriptor" "")
+
+} "Medium security profile for FLOW Sandbox"

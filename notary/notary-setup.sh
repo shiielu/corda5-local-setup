@@ -180,5 +180,7 @@ REGISTRATION_ID=$(echo "$RESPONSE" | jq -r '.registrationId')
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/membership/$NOTARY_HOLDING_ID/$REGISTRATION_ID)
 echo "$RESPONSE" | jq .
+REGISTRATION_STATUS=$(echo "$RESPONSE" | jq -r '.registrationStatus')
+echo "registration status: "$REGISTRATION_STATUS""
 echo "notary setup finished"
 

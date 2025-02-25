@@ -20,12 +20,10 @@ KEY_ALIAS="signing key 1"
 CPB_ALIAS="Member cpb cert"
 
 FLOW_CPI_FILE="Flow-1.0.0.0-SNAPSHOT.cpi"
-CONTRACT_CPI_FILE="Contract-1.0.0.0-SNAPSHOT.cpi"
 
 CPB_CERT="member-cpb-cert.pem"
 CPI_CERT="member-cpi-cert.pem"
 SAMPLE_FLOW_CPB_FILE="workflows-1.0-SNAPSHOT-package.cpb"
-SAMPLE_CONTRACT_CPB_FILE="contracts-1.0-SNAPSHOT-package.cpb"
 SIGNED_MEMBER_CPB_FILE="signed-workflows-1.0-SNAPSHOT-package.cpb"
 RUNTIME_OS_PATH="/home/shiielu/corda5-2-local/corda-runtime-os"
 CERTIFICATE_REQUEST_PATH="request.csr"
@@ -37,6 +35,8 @@ CORDA_DEFAULT_KEY_ALIAS="gradle plugin default key"
 MGM_VNODE_X500_NAME="CN=MGM, O=Local, L=London, C=GB"
 MEMBER_NAME=$1
 MEMBER_VNODE_X500NAME="CN=$MEMBER_NAME, O=Local, L=London, C=GB"
+
+CPI_CHECKSUM=$2
 
 if [ "$#" -eq 0 ]; then
     echo -e "Error: メンバー名を引数として渡してください\n例:   ./member-setup.sh Alice"
@@ -59,96 +59,79 @@ MGM_HOLDING_ID=$(echo "$RESPONSE" | jq -r --arg xname "$MGM_VNODE_X500_NAME"  '.
 curl -k -u $REST_API_USER:$REST_API_PASSWORD -X GET $REST_API_URL/mgm/$MGM_HOLDING_ID/info | jq . > "$WORK_DIR/$GROUP_POLICY"
 
 
+# CPI Checksumが渡されなかった場合、新規CPIを作成・デプロイ
+if [ -z "$2" ]; then
+
+
+    if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
+        rm  "$WORK_DIR/$KEY_STORE"
+        echo "key store regenerate"
+    fi
+    # Member CPI署名鍵作成
+    keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "$MEMBER_VNODE_X500NAME" -keyalg RSA -storetype pkcs12 -validity 4000
+
+
+    # CPB証明書をインポート
+
+    keytool -importcert -keystore "$KEY_STORE" -storepass "$STORE_PASS" -noprompt -alias "r3-ca-key" -file "r3-ca-key.pem"
+    keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias gradle-plugin-default-key -file gradle-plugin-default-key.pem
+    keytool -list -v -keystore signingkeys.pfx -storepass "keystore password"
+    sleep 1
+    # Member FLOW CPI作成
+    if [[ -e "$WORK_DIR/$FLOW_CPI_FILE" ]]; then
+        rm "$WORK_DIR/$FLOW_CPI_FILE"
+        echo "cpi file regenerate"
+    fi
+    corda-cli.sh package create-cpi \
+    --group-policy "$WORK_DIR/GroupPolicy.json" \
+    --cpb "$WORK_DIR/$SAMPLE_FLOW_CPB_FILE" \
+    --cpi-name "Flow" \
+    --cpi-version "1.0.0.0-SNAPSHOT" \
+    --file "$WORK_DIR/$FLOW_CPI_FILE" \
+    --keystore "$WORK_DIR/$KEY_STORE" \
+    --storepass "$STORE_PASS" \
+    --key "$KEY_ALIAS"
+    echo "flow cpi created"
+    sleep 1
 
 
 
 
-if [[ -e "$WORK_DIR/$KEY_STORE" ]]; then
-    rm  "$WORK_DIR/$KEY_STORE"
-    echo "key store regenerate"
+    # 署名検証用の証明書作成
+    if [[ -e "$WORK_DIR/$CPI_CERT" ]]; then
+        rm  "$WORK_DIR/$CPI_CERT"
+        echo "cpi singed cert regenerate"
+    fi
+    keytool -exportcert -rfc -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -file "$CPI_CERT"
+    echo "CPI cert created"
+
+    # 証明書をCordaへアップロード
+
+    curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="member-cpi-key-cert" -F certificate=@"$WORK_DIR/$CPI_CERT" $REST_API_URL/certificate/cluster/code-signer
+    sleep 1
+    curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="gradle-plugin-default-key" -F certificate=@"$WORK_DIR/$CORDA_DEFAULT_CERT" $REST_API_URL/certificate/cluster/code-signer
+    sleep 1
+    curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="r3-ca-key" -F certificate=@"$WORK_DIR/r3-ca-key.pem" $REST_API_URL/certificate/cluster/code-signer
+
+    echo "CPI cert uploaded to corda"
+
+    # CPIをCordaへアップロード
+
+    RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$FLOW_CPI_FILE $REST_API_URL/cpi/)
+    echo "$RESPONSE" | jq .
+    echo "CPI uploaded to corda"
+    FLOW_CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
+    # CPIチェックサム取得
+    sleep 5
+    RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$FLOW_CPI_ID)
+    echo "$RESPONSE" | jq .
+    CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
+else
+    echo "CPI creation skipped"
 fi
-# Member CPI署名鍵作成
-keytool -genkeypair -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -dname "$MEMBER_VNODE_X500NAME" -keyalg RSA -storetype pkcs12 -validity 4000
-
-
-# CPB証明書をインポート
-
-keytool -importcert -keystore "$KEY_STORE" -storepass "$STORE_PASS" -noprompt -alias "r3-ca-key" -file "r3-ca-key.pem"
-keytool -importcert -keystore signingkeys.pfx -storepass "keystore password" -noprompt -alias gradle-plugin-default-key -file gradle-plugin-default-key.pem
-keytool -list -v -keystore signingkeys.pfx -storepass "keystore password"
-sleep 1
-# Member FLOW CPI作成
-if [[ -e "$WORK_DIR/$FLOW_CPI_FILE" ]]; then
-    rm "$WORK_DIR/$FLOW_CPI_FILE"
-    echo "cpi file regenerate"
-fi
-corda-cli.sh package create-cpi \
---group-policy "$WORK_DIR/GroupPolicy.json" \
---cpb "$WORK_DIR/$SAMPLE_FLOW_CPB_FILE" \
---cpi-name "Flow" \
---cpi-version "1.0.0.0-SNAPSHOT" \
---file "$WORK_DIR/$FLOW_CPI_FILE" \
---keystore "$WORK_DIR/$KEY_STORE" \
---storepass "$STORE_PASS" \
---key "$KEY_ALIAS"
-echo "flow cpi created"
-sleep 1
-# Member CONTRACT CPI作成
-if [[ -e "$WORK_DIR/$CONTRACT_CPI_FILE" ]]; then
-    rm "$WORK_DIR/$CONTRACT_CPI_FILE"
-    echo "cpi file regenerate"
-fi
-corda-cli.sh package create-cpi \
---group-policy "$WORK_DIR/GroupPolicy.json" \
---cpb "$WORK_DIR/$SAMPLE_CONTRACT_CPB_FILE" \
---cpi-name "Contract" \
---cpi-version "1.0.0.0-SNAPSHOT" \
---file "$WORK_DIR/$CONTRACT_CPI_FILE" \
---keystore "$WORK_DIR/$KEY_STORE" \
---storepass "$STORE_PASS" \
---key "$KEY_ALIAS"
-echo "contract cpi created"
-sleep 1
 
 
 
-
-# 署名検証用の証明書作成
-if [[ -e "$WORK_DIR/$CPI_CERT" ]]; then
-    rm  "$WORK_DIR/$CPI_CERT"
-    echo "cpi singed cert regenerate"
-fi
-keytool -exportcert -rfc -alias "$KEY_ALIAS" -keystore "$KEY_STORE" -storepass "$STORE_PASS" -file "$CPI_CERT"
-echo "CPI cert created"
-
-# 証明書をCordaへアップロード
-
-curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="member-cpi-key-cert" -F certificate=@"$WORK_DIR/$CPI_CERT" $REST_API_URL/certificate/cluster/code-signer
-sleep 1
-curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="gradle-plugin-default-key" -F certificate=@"$WORK_DIR/$CORDA_DEFAULT_CERT" $REST_API_URL/certificate/cluster/code-signer
-sleep 1
-curl -k -u $REST_API_USER:$REST_API_PASSWORD -X PUT -F alias="r3-ca-key" -F certificate=@"$WORK_DIR/r3-ca-key.pem" $REST_API_URL/certificate/cluster/code-signer
-
-echo "CPI cert uploaded to corda"
-
-# CPIをCordaへアップロード
-
-RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$FLOW_CPI_FILE $REST_API_URL/cpi/)
-echo "$RESPONSE" | jq .
-echo "CPI uploaded to corda"
-FLOW_CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
-
-
-RESPONSE=$(curl -k -u "$REST_API_USER:$REST_API_PASSWORD" -F upload=@$WORK_DIR/$CONTRACT_CPI_FILE $REST_API_URL/cpi/)
-echo "$RESPONSE" | jq .
-echo "CPI uploaded to corda"
-CONTRACT_CPI_ID=$(echo "$RESPONSE" | jq -r '.id')
-
-# CPIチェックサム取得
-sleep 5
-RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/cpi/status/$FLOW_CPI_ID)
-echo "$RESPONSE" | jq .
-CPI_CHECKSUM=$(echo "$RESPONSE" | jq -r '.cpiFileChecksum')
 
 # member仮想ノード作成
 
@@ -215,4 +198,7 @@ REGISTRATION_ID=$(echo "$RESPONSE" | jq -r '.registrationId')
 sleep 5
 RESPONSE=$(curl -k -u $REST_API_USER:$REST_API_PASSWORD $REST_API_URL/membership/$MEMBER_HOLDING_ID/$REGISTRATION_ID)
 echo "$RESPONSE" | jq .
+REGISTRATION_STATUS=$(echo "$RESPONSE" | jq -r '.registrationStatus')
+echo "registration status: "$REGISTRATION_STATUS""
 echo "member setup finished"
+
