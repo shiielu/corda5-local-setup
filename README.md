@@ -11,41 +11,73 @@ Corda5の概要についてはドキュメントを参照(https://docs.r3.com/en
 - Corda CLI v5.2.0 (https://docs.r3.com/en/platform/corda/5.2/developing-applications/tooling/installing-corda-cli.html)
 - VsCode v1.97.2 もしくはIntellij v2021.x.x(xは任意) Community Edition
 
-# 手順
+# 基盤構築手順
 ## ネットワークの種類
 本章では、「独自作成のスクリプトを使用して動的ネットワークを構成する」手順、「Cordaが用意した開発ツールであるCordapp Template Javaを使用して静的ネットワークを構成する」手順それぞれについて記述する。
 静的ネットワークは「事前に参加者をファイルに定義したネットワーク」、動的ネットワークは「Membership Group Manager(MGM)が同的にネットワーク参加者の参加・離脱等を調整するネットワーク」を指す。
 ## 動的ネットワーク構築手順
-1. k3sクラスタにcorda-dev-prereqsチャートをデプロイする。corda-dev-prereqsは、Corda5クラスタに必要なPostgreSQL、Kafkaのpodを構築する。
+1. ルートディレクトリでcorda-dev-prereqsリポジトリをgit cloneする
+git clone https://github.com/corda/corda-dev-prereqs.git
+
+2. k3sクラスタにcorda-dev-prereqsチャートをデプロイする。corda-dev-prereqsは、Corda5クラスタに必要なPostgreSQL、Kafkaのpodを構築する。
 helm install prereqs -n corda corda-dev-prereqs/charts/corda-dev-prereqs --timeout 10m  --debug --create-namespace
-2. k3sクラスタにCordaをデプロイする。
+
+3. ルートディレクトリでcorda-runtime-osリポジトリをgit cloneする
+git clone -b release-5.2.0.0 https://github.com/corda/corda-runtime-os.git
+
+4. corda-runtime-os/build.gradleの`buildscript`セクションを以下のように変更する
+```
+buildscript {
+    configurations.classpath {
+        resolutionStrategy {
+            // FORCE Gradle to use latest dynamic-version plugins.
+            cacheDynamicVersionsFor 0, 'seconds'
+        }
+    }
+    repositories {
+        jcenter()
+        maven {
+            url = 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.28.2"
+    }
+}
+```
+5. corda-runtime-os/tools/corda-runtime-gradle-plugin/build.gradle 3行目の`id 'com.r3.internal.gradle.plugins.r3Publish'`をコメントアウトする
+
+※4.5の手順は、corda-runtime-osリポジトリのgradleタスクを正常に実行するために必要。詳細はissueを参照(https://github.com/corda/corda-runtime-os/issues/6151)
+
+6. k3sクラスタにCordaクラスタをデプロイする。
 helm install corda -n corda corda --values corda/values-prereqs.yaml --debug
-3. ポートフォワードを設定し、REAT API経由でCordaを操作できるようにする
+
+7. ポートフォワードを設定し、REAT API経由でCordaを操作できるようにする
 kubectl port-forward --namespace corda deployment/corda-rest-worker 8888
-4. Cordaクラスタの起動確認を行う。以下のcurlコマンドを実行し、レスポンスが返ってくれば正常に起動している。
+8. Cordaクラスタの起動確認を行う。以下のcurlコマンドを実行し、レスポンスが返ってくれば正常に起動している。
 リクエスト
 curl -k -u admin:admin https://127.0.0.1:8888/api/v5_2/cpi
 レスポンス
 {"cpis":[]}
-5. mgmディレクトリで新規ターミナルを起動する
-6. mgm-setup.shを実行し、CordaクラスタにMGMを構築する。以下のメッセージが表示されれば完了とする。
+9. mgmディレクトリで新規ターミナルを起動する
+10. mgm-setup.shを実行し、CordaクラスタにMGMを構築する。以下のメッセージが表示されれば完了とする。
 ./mgm-setup.sh
 
 メッセージ
 registration status: APPROVED
 MGM setup finished
-7. notaryディレクトリで新規ターミナルを起動する
+11. notaryディレクトリで新規ターミナルを起動する
 
-8. notary-setup.shを実行し、Cordaクラスタにnotaryを構築する。以下のメッセージが表示されれば完了とする。
+12. notary-setup.shを実行し、Cordaクラスタにnotaryを構築する。以下のメッセージが表示されれば完了とす。
 ./notary-setup.sh
 
 メッセージ
 registration status: APPROVED
 notary setup finished
 
-9. memberディレクトリで新規ターミナルを起動する
+13. memberディレクトリで新規ターミナルを起動する
 
-10. notary-setup.shを実行し、Cordaクラスタにmemberを構築する。以下のメッセージが表示されれば完了とする。
+14. notary-setup.shを実行し、Cordaクラスタにmemberを構築する。以下のメッセージが表示されれば完了とする。
 ./notary-setup.sh {仮想ノード名} {CPIチェックサム}
 (CPIチェックサムは、既にほかのメンバーを追加済みの時など、Cordaクラスタにデプロイ済みのCPIがあり、それと紐づけたメンバー仮想ノードを作成したい場合に入力する。空の場合は新規にCPIを作成、デプロイする)
 
@@ -54,7 +86,7 @@ notary setup finished
 メッセージ
 registration status: APPROVED
 member setup finished
-11. 以下のcurlコマンドを実行し、レスポンスにMGM(1台)、notary(１台)、メンバー(作成した数)の仮想ノードが含まれていれば完了とする。
+15. 以下のcurlコマンドを実行し、レスポンスにMGM(1台)、notary(１台)、メンバー(作成した数)の仮想ノードが含まれていれば完了とする。
 
 curl -k -u admin:admin https://127.0.0.1:8888/api/v5_2/virtualnode | jq .
 
@@ -166,4 +198,55 @@ curl -k -u admin:admin https://127.0.0.1:8888/api/v5_2/virtualnode | jq .
       "externalMessagingRouteConfiguration": null
     }
   ]
+}
+
+## 静的ネットワーク構築手順
+1. cordapp-template-javaリポジトリをgit cloneする
+git clone -b release-V5.2 https://github.com/corda/cordapp-template-java.git
+2. Gradleタスク「vNodesSetup」を実行する
+
+# アプリケーション動作確認手順
+## 動的ネットワークでの動作確認手順
+2025/2/25時点ではアプリケーションが動作しない状態のため、対応中
+動作確認次第、記載。
+## 静的ネットワークでの動作確認手順
+1. Flow(アプリケーションロジック)実行する主体となる仮想ノードのshort hashを取得する。
+以下のcurlコマンドを実行し、Aliceの仮想ノード一台のshorthashをメモする
+
+リクエスト
+curl -k -u admin:admin https://127.0.0.1:8888/api/v5_2/virtualnode | jq '.virtualNodes[] | select(.holdingIdentity.x500Name | contains("Alice")) | .holdingIdentity.shortHash'
+
+レスポンス例
+"8D5486EEA428"
+
+2. 以下のcurlコマンドを実行し、Aliceの仮想ノードから「CreateNewChat」フローを実行する
+また、リクエスト内のclientRequestIdをメモしておく
+
+リクエスト
+curl -X POST -k -u admin:admin https://127.0.0.1:8888/api/v5_2/flow/{1.で取得したshorthash} \
+-d '{
+    "clientRequestId": "create-1",
+    "flowClassName": "com.r3.developers.cordapptemplate.utxoexample.workflows.CreateNewChatFlow",
+    "requestBody": {
+        "chatName":"Chat with Bob",
+        "otherMember":"CN=Bob, OU=Test Dept, O=R3, L=London, C=GB",
+        "message": "Hello Bob"
+        }
+}'
+
+3. 以下のcurlコマンドを実行し、Flowの実行結果を確認する
+レスポンスのflowStatusが「COMPLETED」になっていれば、動作確認完了とする。
+
+リクエスト
+curl -k -u admin:admin https://127.0.0.1:8888/api/v5_2/flow/{1.で取得したshorthash}/{2.で取得したclientRequestId}
+
+レスポンス
+{
+  "holdingIdentityShortHash": "8D5486EEA428",
+  "clientRequestId": "create-1",
+  "flowId": "d1f9b24b-c53e-4e92-b267-79a05ee2f1e0",
+  "flowStatus": "COMPLETED",
+  "flowResult": "SHA-256D:0E45B6ACBF81EBDB0357C21C7F8DA39D889F3C9E7BD04495385DDC5986255D10",
+  "flowError": null,
+  "timestamp": "2025-02-25T08:52:46.398Z"
 }
